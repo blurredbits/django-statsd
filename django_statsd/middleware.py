@@ -1,4 +1,5 @@
 import inspect
+import re
 from time import time
 
 from django.conf import settings
@@ -12,15 +13,15 @@ class StatsMiddleware(object):
         request._start_time = time()
 
     def process_response(self, request, response):
-        statsd.incr('response.%s' % response.status_code)
+        statsd.incr('django.response_codes.%s' % re.sub('\d{2}$','xx', str(response.status_code)))
         if hasattr(request, '_start_time'):
             ms = int((time() - request._start_time) * 1000)
-            statsd.timing('timer', ms)
+            statsd.timing('django.response', ms)
         return response
 
     def process_exception(self, request, exception):
         if not isinstance(exception, Http404):
-            statsd.incr('response.500')           
+            statsd.incr('django.response_codes.5xx')           
 
 
 class GraphiteMiddleware(object):

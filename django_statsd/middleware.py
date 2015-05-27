@@ -6,6 +6,22 @@ from django.http import Http404
 
 from django_statsd.clients import statsd
 
+class StatsMiddleware(object):
+
+    def process_request(self, request):
+        request._start_time = time()
+
+    def process_response(self, request, response):
+        statsd.incr('response.%s' % response.status_code)
+        if hasattr(request, '_start_time'):
+            ms = int((time() - request._start_time) * 1000)
+            statsd.timing('timer', ms)
+        return response
+
+    def process_exception(self, request, exception):
+        if not isinstance(exception, Http404):
+            statsd.incr('response.500')           
+
 
 class GraphiteMiddleware(object):
 
